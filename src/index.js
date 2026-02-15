@@ -1,5 +1,6 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import * as ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import './index.css';
 import to_town from './images/to_castle_town.jpg'
 import blacksmith from './images/blacksmith.jpg'
@@ -108,18 +109,16 @@ function Tile(props){
     return (
         <button className="tile"
             onClick={props.onClick}>
-
+            <figure className="tile">
+                <img
+                    className="tile-image"
+                    onClick={props.onClick}
+                    src={props.image}
+                    alt={props.name}
+                />
+                <figcaption>{props.direction} to {props.name} <i>({props.cost})</i></figcaption>
+            </figure>
         </button>
-        <figure className="tile">
-            <img
-                className="tile-image"
-                onClick={props.onClick}
-                src={props.image}
-                alt={props.name}
-            />
-            <figcaption>{props.direction} to {props.name} <i>({props.cost})</i></figcaption>
-        </figure>
-        
     );
 }
 
@@ -320,10 +319,11 @@ class Game extends React.Component {
   
 // ========================================
   
-ReactDOM.render(
-    <Game />,
+let root = createRoot(
     document.getElementById('root')
 );
+
+root.render(<Game />)
 
 
 /**
