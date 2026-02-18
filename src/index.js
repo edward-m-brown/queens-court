@@ -1,13 +1,10 @@
 import React from 'react';
-import * as ReactDOM from 'react-dom';
+import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-import to_town from './images/to_castle_town.jpg'
-import blacksmith from './images/blacksmith.jpg'
-import fields_quest from './images/fields_quest.jpg'
-import to_fields from './images/to_fields.jpg'
-import temple from './images/temple.jpg'
-import empty_image from './images/empty_image.jpg'
+import { world_map, directions } from './data/maps.js';
+import { GameScreen } from './components/GameScreen.jsx';
+import { CharacterCreation } from './components/CharacterCreation.jsx';
 
 // TODO: Find a less hacky way to extend these objects.
 // I quite like having both of these as built-ins.
@@ -19,64 +16,6 @@ myMath.randomInt = (max)=>{
 var myArray = Array;
 myArray.prototype.any = function() {
     return this[Math.randomInt(this.length)];
-}
-/* First shot at the game:
- * - Clickable Tiles that can transition from one Location to another and back.
- */
-// Directions is split into rows. Kind of hacky feeling, but this was a decent start at getting
-// the tiles to render as rows of cardinal directions.
-const directions = [
-    ['North-West', 'North', 'North-East'], // row 0
-    ['West', 'Center','East'],             // row 1
-    ['South-West', 'South', 'South-East']  // row 2
-];
-
-const nothings = ['Naught', 'Nary a thing', 'Nothing', 'Nothing of interest']
-
-/** 
- * Note: the Forest was actually a combination of Encounter and Location.
- * Sometimes clicking would lead to an encounter; Sometimes it would lead to
- * the forest location.
- * Goblin Caves were similar, but there would always be an encounter with the
- * Gate before descending into the Caves. 
- * 
- * I will need to account for these kind of transitions in my design.
- * My first thought on how to handle this is by allowing for the update request
- * to send a response back with a Location object.
- */
-const plains_location = {
-    map: [
-        null, /* North-West */
-        null, /* North */
-        {image: to_town, name: 'Castle Town', cost: 0, type: 'Location'}, /* North-East */
-        null, /* West */
-        {image: fields_quest, name: 'Fields', cost: 1, type: 'Encounter'}, /* Center */
-        {image: temple, name: 'Temple', cost: 0, type: 'Interaction'}, /* East */
-        {image: 'dark-forest-image', name: 'Dark Forest', cost: 1, type: 'Location', discovered: false}, /* South-West */
-        {image: 'goblin-caves-image', name: 'Goblin Caves', cost: 1, type: 'Location', discovered: false}, /* South */
-        null, /* South-East */
-    ],
-    background_color: '#917029',
-};
-
-const town_location = {
-    map: [
-        null, /* North-West */
-        null, /* North */
-        {image: blacksmith, name: 'Smithy', cost: 0, type: 'Interaction'}, /* North-East */
-        null, /* West */
-        null, /* Center */
-        null, /* East */
-        {image: to_fields, name: 'Fields', cost: 0, type: 'Location'}, /* South-West */
-        null, /* South */
-        null, /* South-East */
-    ],
-    background_color: '#54872f',
-};
-
-const location_table = {
-    'Fields': plains_location,
-    'Castle Town': town_location,
 }
 
 // What should an Encounter look like?
@@ -105,39 +44,9 @@ const example_encounter = {
  */
 
 
-function Tile(props){
-    return (
-        <button className="tile"
-            onClick={props.onClick}>
-            <figure className="tile">
-                <img
-                    className="tile-image"
-                    onClick={props.onClick}
-                    src={props.image}
-                    alt={props.name}
-                />
-                <figcaption>{props.direction} to {props.name} <i>({props.cost})</i></figcaption>
-            </figure>
-        </button>
-    );
-}
 
-function EmptyTile(props){
-    let nothing = nothings.any();
-    let direction = props.direction;
-    let descriptionString = `${nothing} to the ${direction}`;
-    return (
-        <figure className="tile">
-            <img
-                className="tile-image"
-                src={empty_image}
-                alt={descriptionString}
-            />
-            <figcaption>{descriptionString}</figcaption>
-        </figure>
-        
-    );
-}
+
+
 
 /**
  * Challenges I see coming with the GameScreen:
@@ -160,126 +69,36 @@ function EmptyTile(props){
  *          +- Interaction (Queen's court):
  *              { options: [mingle, gamble]}
  */
-class GameScreen extends React.Component {
-    /**
-     * Will I need something like this?
-     * Could have the Locations detailed like a Compass Rose.
-     * For each cardinal direction, if there is a Tile, render it.
-     */
-    renderTile(map_data, direction) {
-        return (
-            <Tile
-                name={map_data.name}
-                image={map_data.image}
-                onClick={()=>this.props.tileClick(map_data.type, map_data.name)}
-                direction={direction}
-                cost={map_data.cost}
-            />
-        );
-    }
 
-    render() {
-        if(this.props.location === null) {
-            // Error handling here.
-            return (<h1> ERROR: NULL Game state </h1>)
-        } else if(this.props.location && this.props.location.map
-            && this.props.encounter === null
-            && this.props.interaction === null) {
-            /**
-             * Only the location of the Game is populated. Go ahead and render the location.
-             */
-            return (
-                <div className="tile-map"
-                    style={{background: this.props.location.background_color}}
-                >
-                    {directions.map((v, i) => {
-                        const offset = 3 * i;
-                        return(
-                            <div className="tile-row">
-                                {directions[i].map((direction, index) => {
-                                    const map_data = this.props.location.map[index + offset];
-                                    if(map_data !== null
-                                        && map_data.discovered !== false) {
-                                        return(
-                                            <div className={"tile-slot " + direction}>
-                                                {this.renderTile(map_data, direction)}
-                                            </div>
-                                        );
-                                    } else {
-                                        return(
-                                            <div className="tile-slot">
-                                                <EmptyTile direction={direction}/>
-                                            </div>
-                                        );
-                                    }
-                                })}
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-        } else if(this.props.encounter !== null) {
-            /**
-             * Encounter Loop:
-             * There are 3 possible states for the encounter loop:
-             * 1. choose action
-             * 2. describe outcome
-             * 3. result state
-             * 
-             * The Encounter Loop should iterate over states 1 and 2, until the
-             * encounter is over and state 3 is reached. 
-             */
-            const encounter = this.props.encounter;
-            // The encounter object has 3 parts: creature, character, and status_update.
-
-            // 
-            // while(this.props.encounter !== null) {
-            // 
-            // }
-            return (
-                <div className="encounter-window"
-                    style={{background: '#FF0000'}}>
-                    <button onClick={()=>{this.props.tileClick('Location', 'Fields')}}>
-                        This an encounter thingy
-                    </button>
-                </div>
-            );
-
-        } else if(this.props.interaction !== null) {
-            /**
-             * There is an interaction. Render the Interaction stuff.
-             * Exiting the Interaction should properly clear this piece of Game state.
-             */
-            // Interaction Loop
-            // while(this.props.interaction !== null) {
-            //     
-            // }
+function initGameState() {
+        return {
+            location: world_map["Plains"],
+            encounter: null,
+            interaction: null,
+            character: null
         }
-    }
 }
-  
-class Game extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            location: location_table['Fields'],
+
+function Game(props) {
+    const [mapState, setMapState] = useState({
+            location: world_map["Plains"],
             encounter: null,
             interaction: null
-        };
-    }
+        });
+    const [characterState, setCharacterState] = useState(null);
 
-    handleTileClick(type, name) {
+    function handleTileClick(type, name) {
         switch(type) {
             case 'Location':
-                this.setState({
-                    location: location_table[name],
+                setMapState({
+                    location: world_map[name],
                     encounter: null,
                     interaction: null
                 });
                 break;
             case 'Encounter':
-                this.setState({
-                    location: this.state.location,
+                setMapState({
+                    location: mapState.location,
                     encounter: example_encounter,
                     interaction: null
                 });
@@ -290,30 +109,44 @@ class Game extends React.Component {
                 break;
         }
     }
-
-    render() {
-        /**
-         * structure could be:
-         * - GameScreen <-- This shows the current Location, Encounter, Interaction, or Menu.
-         * - MenuControls <-- This always stays the same. It shows menu options like
-         *      character sheet, social, settings, sign out, etc.
-         *      These will need to render on the GameScreen also.
-         * - Status <-- Probably need constant display of a few things when adventuring.
-         *      Status would include things like HP, number of quests left, and ???.
-         *
-         */ 
+ 
+    /**
+     * structure could be:
+     * - GameScreen <-- This shows the current Location, Encounter, Interaction, or Menu.
+     * - MenuControls <-- This always stays the same. It shows menu options like
+     *      character sheet, social, settings, sign out, etc.
+     *      These will need to render on the GameScreen also.
+     * - Status <-- Probably need constant display of a few things when adventuring.
+     *      Status would include things like HP, number of quests left, and ???.
+     *
+     */
+    if (characterState) {
         return (
             <div className="game">
                 <div className="game-screen">
                     <GameScreen
-                        tileClick={(type, name) => this.handleTileClick(type, name)}
-                        location={this.state.location}
-                        encounter={this.state.encounter}
-                        interaction={this.state.interaction}
+                        tileClick={(type, name) => handleTileClick(type, name)}
+                        location={mapState.location}
+                        encounter={mapState.encounter}
+                        interaction={mapState.interaction}
+                        character={characterState}
                     />
+                    {/**TODO: Add UIBar component which will have buttons for
+                      * Character Sheet, inventory, game menu, and possibly
+                      * other things like quests.
+                      */}
                 </div>
             </div>
         );
+    } else {
+        /**
+         * There is no character loaded. We need to open with a
+         * "create character" or a "login" screen.
+         */
+        return ( 
+            <CharacterCreation setCharacter={setCharacterState} />
+        )
+        
     }
 }
   
