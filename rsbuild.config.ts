@@ -6,4 +6,7 @@ export default defineConfig({
   html: {
     template: './public/index.html',
   },
+  output: {
+    base: '/queens-court/',
+  },
 });
